@@ -1,0 +1,43 @@
+{
+  "name": "city-tier-stats-desktop",
+  "description": "City tier statistics desktop app",
+  "author": "Eastun Tech",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "postinstall": "electron-builder install-app-deps",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build && electron-builder",
+    "build:mac": "vue-tsc && vite build && electron-builder --mac",
+    "build:mac:local": "vue-tsc && vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "build:win": "vue-tsc && vite build && electron-builder --win",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
+    "better-sqlite3": "^11.10.0",
+    "bindings": "^1.5.0",
+    "file-uri-to-path": "^1.0.0",
+    "naive-ui": "^2.44.1",
+    "pinia": "^3.0.4",
+    "vue": "^3.4.21",
+    "vue-router": "^5.1.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "electron-icon-builder": "^2.0.1",
+    "sharp": "^0.35.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vue-tsc": "^2.0.26"
+  },
+  "main": "dist-electron/main.js"
+}
