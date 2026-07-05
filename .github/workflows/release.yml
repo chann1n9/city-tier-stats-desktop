@@ -64,6 +64,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Rebuild native dependencies for Electron
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          pnpm exec electron-rebuild --force --only better-sqlite3 --arch x64
+
       - name: Download city-tier-stats runtime
         shell: pwsh
         run: |
@@ -155,6 +162,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Rebuild native dependencies for Electron
+        shell: bash
+        run: pnpm exec electron-rebuild --force --only better-sqlite3 --arch arm64
 
       - name: Download city-tier-stats runtime
         shell: bash
