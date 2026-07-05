@@ -6,6 +6,7 @@
   "asarUnpack": [
     "node_modules/better-sqlite3/**/*"
   ],
+  "npmRebuild": false,
   "productName": "City Tier Stats",
   "directories": {
     "output": "release/${version}"
