@@ -23,6 +23,7 @@
   ],
   "mac": {
     "icon": "build/icons/mac/icon.icns",
+    "notarize": true,
     "target": [
       "dmg"
     ],

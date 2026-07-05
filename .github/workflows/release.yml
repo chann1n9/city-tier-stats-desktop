@@ -1,0 +1,286 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      runtime_version:
+        description: 'city-tier-stats runtime version without v prefix, e.g. 0.1.5'
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '9.14.2'
+  CITY_TIER_STATS_RUNTIME_REPO: chann1n9/city-tier-stats
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Resolve city-tier-stats runtime version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $runtimeVersion = "${{ inputs.runtime_version }}"
+
+          if ([string]::IsNullOrWhiteSpace($runtimeVersion)) {
+            $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
+            $runtimeVersion = $packageJson.runtimeDependencies.'city-tier-stats'
+          }
+
+          if ($null -eq $runtimeVersion) {
+            $runtimeVersion = ""
+          }
+
+          $runtimeVersion = $runtimeVersion.Trim().TrimStart('v')
+
+          if ([string]::IsNullOrWhiteSpace($runtimeVersion)) {
+            throw "package.json runtimeDependencies.city-tier-stats is empty."
+          }
+
+          "CITY_TIER_STATS_RUNTIME_VERSION=$runtimeVersion" >> $env:GITHUB_ENV
+          Write-Host "Using city-tier-stats runtime version: $runtimeVersion"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download city-tier-stats runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $version = "${env:CITY_TIER_STATS_RUNTIME_VERSION}"
+          $repo = "${env:CITY_TIER_STATS_RUNTIME_REPO}"
+          $assetName = "city-tier-stats-runtime-$version-windows-x64.zip"
+          $assetUrl = "https://github.com/$repo/releases/download/v$version/$assetName"
+          $runtimeRoot = "resources/runtimes/city-tier-stats"
+          $archivePath = "runtime.zip"
+          $extractPath = "runtime-extract"
+
+          New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
+          Invoke-WebRequest -Uri $assetUrl -OutFile $archivePath
+          Expand-Archive -Path $archivePath -DestinationPath $extractPath -Force
+
+          if (Test-Path "$extractPath/city-tier-stats") {
+            Copy-Item "$extractPath/city-tier-stats/*" $runtimeRoot -Recurse -Force
+          } else {
+            Copy-Item "$extractPath/*" $runtimeRoot -Recurse -Force
+          }
+
+          if (-not (Test-Path "$runtimeRoot/city-tier-stats.exe")) {
+            throw "Missing runtime executable: $runtimeRoot/city-tier-stats.exe"
+          }
+          if (-not (Test-Path "$runtimeRoot/city_tiers.yaml")) {
+            throw "Missing default rules file: $runtimeRoot/city_tiers.yaml"
+          }
+
+      - name: Build Windows installer
+        run: pnpm build:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            release/**/*.exe
+            release/**/*.blockmap
+            release/**/builder-effective-config.yaml
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Resolve city-tier-stats runtime version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runtime_version="${{ inputs.runtime_version }}"
+
+          if [ -z "$runtime_version" ]; then
+            runtime_version="$(node -p "require('./package.json').runtimeDependencies?.['city-tier-stats'] || ''")"
+          fi
+
+          runtime_version="${runtime_version#v}"
+
+          if [ -z "$runtime_version" ]; then
+            echo "package.json runtimeDependencies.city-tier-stats is empty." >&2
+            exit 1
+          fi
+
+          echo "CITY_TIER_STATS_RUNTIME_VERSION=$runtime_version" >> "$GITHUB_ENV"
+          echo "Using city-tier-stats runtime version: $runtime_version"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download city-tier-stats runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${CITY_TIER_STATS_RUNTIME_VERSION}"
+          repo="${CITY_TIER_STATS_RUNTIME_REPO}"
+          asset_name="city-tier-stats-runtime-${version}-macos-arm64.zip"
+          asset_url="https://github.com/${repo}/releases/download/v${version}/${asset_name}"
+          runtime_root="resources/runtimes/city-tier-stats"
+          archive_path="runtime.zip"
+          extract_path="runtime-extract"
+
+          mkdir -p "$runtime_root" "$extract_path"
+          curl --fail --location --show-error "$asset_url" --output "$archive_path"
+          unzip -q "$archive_path" -d "$extract_path"
+
+          if [ -d "$extract_path/city-tier-stats" ]; then
+            cp -R "$extract_path/city-tier-stats/." "$runtime_root/"
+          else
+            cp -R "$extract_path/." "$runtime_root/"
+          fi
+
+          chmod -R u+rwX "$runtime_root"
+          chmod +x "$runtime_root/city-tier-stats"
+
+          test -x "$runtime_root/city-tier-stats"
+          test -f "$runtime_root/city_tiers.yaml"
+
+      - name: Import macOS signing certificate
+        shell: bash
+        env:
+          MACOS_APP_CERT_P12_BASE64: ${{ secrets.MACOS_APP_CERT_P12_BASE64 }}
+          MACOS_APP_CERT_PASSWORD: ${{ secrets.MACOS_APP_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$MACOS_APP_CERT_P12_BASE64" ] || [ -z "$MACOS_APP_CERT_PASSWORD" ]; then
+            echo "Missing macOS signing secrets: MACOS_APP_CERT_P12_BASE64, MACOS_APP_CERT_PASSWORD." >&2
+            exit 1
+          fi
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          APP_CERT_PATH="$RUNNER_TEMP/app-cert.p12"
+
+          printf '%s' "$MACOS_APP_CERT_P12_BASE64" | /usr/bin/base64 -D > "$APP_CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$APP_CERT_PATH" -P "$MACOS_APP_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          APP_SIGN_IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk -F '"' '/Developer ID Application/ { print $2; exit }')"
+
+          if [ -z "$APP_SIGN_IDENTITY" ]; then
+            echo "Developer ID Application identity not found in imported certificate." >&2
+            exit 1
+          fi
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "APP_SIGN_IDENTITY=$APP_SIGN_IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Prepare Apple notarization API key
+        shell: bash
+        env:
+          MACOS_NOTARY_API_KEY_P8_BASE64: ${{ secrets.MACOS_NOTARY_API_KEY_P8_BASE64 }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$MACOS_NOTARY_API_KEY_P8_BASE64" ] || [ -z "$MACOS_NOTARY_KEY_ID" ]; then
+            echo "Missing macOS notarization secrets: MACOS_NOTARY_API_KEY_P8_BASE64, MACOS_NOTARY_KEY_ID." >&2
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/notary"
+          printf '%s' "$MACOS_NOTARY_API_KEY_P8_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/notary/AuthKey_${MACOS_NOTARY_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/notary/AuthKey_${MACOS_NOTARY_KEY_ID}.p8"
+
+      - name: Sign macOS runtime binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runtime_root="resources/runtimes/city-tier-stats"
+
+          while IFS= read -r -d '' file_path; do
+            if file "$file_path" | grep -q "Mach-O"; then
+              codesign \
+                --force \
+                --options runtime \
+                --timestamp \
+                --keychain "$KEYCHAIN_PATH" \
+                --sign "$APP_SIGN_IDENTITY" \
+                "$file_path"
+            fi
+          done < <(find "$runtime_root" -type f -print0)
+
+          while IFS= read -r -d '' file_path; do
+            if file "$file_path" | grep -q "Mach-O"; then
+              codesign --verify --strict --verbose=2 "$file_path"
+            fi
+          done < <(find "$runtime_root" -type f -print0)
+
+      - name: Build signed and notarized macOS installer
+        env:
+          APPLE_API_KEY: ${{ runner.temp }}/notary/AuthKey_${{ secrets.MACOS_NOTARY_KEY_ID }}.p8
+          APPLE_API_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$APPLE_API_KEY" ] || [ -z "$APPLE_API_KEY_ID" ] || [ -z "$APPLE_API_ISSUER" ]; then
+            echo "Missing macOS notarization secrets: MACOS_NOTARY_API_KEY_P8_BASE64, MACOS_NOTARY_KEY_ID, MACOS_NOTARY_ISSUER_ID." >&2
+            exit 1
+          fi
+
+          pnpm exec vue-tsc
+          pnpm exec vite build
+          CSC_KEYCHAIN="$KEYCHAIN_PATH" CSC_NAME="$APP_SIGN_IDENTITY" pnpm exec electron-builder --mac --arm64
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            release/**/*.dmg
+            release/**/*.blockmap
+            release/**/builder-effective-config.yaml
+          if-no-files-found: error
