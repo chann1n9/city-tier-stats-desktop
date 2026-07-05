@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { NConfigProvider, NMessageProvider, useOsTheme } from 'naive-ui'
+import { zhCN, dateZhCN } from 'naive-ui'
 import { RouterView } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { createAppThemeOptions } from '@/theme/appTheme'
@@ -13,7 +14,7 @@ const appTheme = computed(() => createAppThemeOptions(isDark.value, themeFamily.
 </script>
 
 <template>
-  <n-config-provider :theme="appTheme.theme" :theme-overrides="appTheme.themeOverrides">
+  <n-config-provider :theme="appTheme.theme" :theme-overrides="appTheme.themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
     <div class="app-theme-root" :style="appTheme.cssVars">
       <n-message-provider>
         <AppLayout v-model:dark="isDark">
