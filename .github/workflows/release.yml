@@ -213,8 +213,11 @@ jobs:
             exit 1
           fi
 
+          APP_SIGN_IDENTITY_QUALIFIER="${APP_SIGN_IDENTITY#Developer ID Application: }"
+
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
           echo "APP_SIGN_IDENTITY=$APP_SIGN_IDENTITY" >> "$GITHUB_ENV"
+          echo "APP_SIGN_IDENTITY_QUALIFIER=$APP_SIGN_IDENTITY_QUALIFIER" >> "$GITHUB_ENV"
 
       - name: Prepare Apple notarization API key
         shell: bash
@@ -273,7 +276,7 @@ jobs:
 
           pnpm exec vue-tsc
           pnpm exec vite build
-          CSC_KEYCHAIN="$KEYCHAIN_PATH" CSC_NAME="$APP_SIGN_IDENTITY" pnpm exec electron-builder --mac --arm64
+          CSC_KEYCHAIN="$KEYCHAIN_PATH" CSC_NAME="$APP_SIGN_IDENTITY_QUALIFIER" pnpm exec electron-builder --mac --arm64
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
