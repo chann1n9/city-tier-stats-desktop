@@ -58,30 +58,11 @@ jobs:
 
           chmod 600 ~/.ossutilconfig
 
-      - name: Create test latest.json
-        run: |
-          set -euo pipefail
-
-          cat > latest.json <<EOF
-          {
-            "version": "0.0.0-oidc-test",
-            "releaseDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "notes": [
-              "GitHub Actions OIDC upload test"
-            ],
-            "downloads": {
-              "test": "${{ vars.DOWNLOAD_BASE_URL }}/latest.json"
-            }
-          }
-          EOF
-
-          cat latest.json
-
       - name: Upload latest.json to OSS
         run: |
             set -euo pipefail
 
-            ossutil cp -f latest.json \
+            ossutil cp -f docs/latest.json \
               "oss://${{ vars.ALIYUN_OSS_BUCKET }}/${{ vars.ALIYUN_OSS_PREFIX }}/latest.json"
 
       - name: Verify public download URL
