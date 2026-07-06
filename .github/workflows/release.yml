@@ -158,8 +158,8 @@ jobs:
         with:
           name: windows-release
           path: |
-            release/**/*.exe
-            release/**/*.blockmap
+            release/${{ needs.validate-release.outputs.version }}/City.Tier.Stats-Windows-${{ needs.validate-release.outputs.version }}-Setup.exe
+            release/${{ needs.validate-release.outputs.version }}/City.Tier.Stats-Windows-${{ needs.validate-release.outputs.version }}-Setup.exe.blockmap
           if-no-files-found: error
 
   build-macos:
@@ -343,8 +343,8 @@ jobs:
         with:
           name: macos-release
           path: |
-            release/**/*.dmg
-            release/**/*.blockmap
+            release/${{ needs.validate-release.outputs.version }}/City.Tier.Stats-Mac-${{ needs.validate-release.outputs.version }}.dmg
+            release/${{ needs.validate-release.outputs.version }}/City.Tier.Stats-Mac-${{ needs.validate-release.outputs.version }}.dmg.blockmap
           if-no-files-found: error
 
   release:
@@ -400,18 +400,32 @@ jobs:
         run: |
           set -euo pipefail
 
-          mapfile -d '' release_files < <(find release-assets -type f -print0)
+          release_files=(
+            "release-assets/City.Tier.Stats-Mac-${VERSION}.dmg"
+            "release-assets/City.Tier.Stats-Mac-${VERSION}.dmg.blockmap"
+            "release-assets/City.Tier.Stats-Windows-${VERSION}-Setup.exe"
+            "release-assets/City.Tier.Stats-Windows-${VERSION}-Setup.exe.blockmap"
+          )
 
-          if [ "${#release_files[@]}" -eq 0 ]; then
-            echo "No release artifacts found in release-assets." >&2
-            exit 1
-          fi
+          for file_path in "${release_files[@]}"; do
+            if [ ! -f "$file_path" ]; then
+              echo "Release artifact not found: $file_path" >&2
+              exit 1
+            fi
+          done
 
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
               --title "$RELEASE_TAG" \
               --notes-file "$NOTES_FILE" \
               --target "$GITHUB_SHA"
+
+            mapfile -t existing_assets < <(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
+
+            for asset_name in "${existing_assets[@]}"; do
+              gh release delete-asset "$RELEASE_TAG" "$asset_name" --yes
+            done
+
             gh release upload "$RELEASE_TAG" "${release_files[@]}" --clobber
           else
             gh release create "$RELEASE_TAG" "${release_files[@]}" \
@@ -472,18 +486,21 @@ jobs:
 
           release_root="${oss_root}/releases/${RELEASE_TAG}"
 
-          mapfile -d '' release_files < <(
-            find release-assets -type f \
-              \( -name '*.dmg' -o -name '*.exe' -o -name '*.blockmap' \) \
-              -print0
+          release_files=(
+            "release-assets/City.Tier.Stats-Mac-${VERSION}.dmg"
+            "release-assets/City.Tier.Stats-Mac-${VERSION}.dmg.blockmap"
+            "release-assets/City.Tier.Stats-Windows-${VERSION}-Setup.exe"
+            "release-assets/City.Tier.Stats-Windows-${VERSION}-Setup.exe.blockmap"
           )
 
-          if [ "${#release_files[@]}" -eq 0 ]; then
-            echo "No release assets found for OSS upload." >&2
-            exit 1
-          fi
+          ossutil rm -f -r "${release_root}/" || true
 
           for file_path in "${release_files[@]}"; do
+            if [ ! -f "$file_path" ]; then
+              echo "Release asset not found for OSS upload: $file_path" >&2
+              exit 1
+            fi
+
             file_name="$(basename "$file_path")"
             ossutil cp -f "$file_path" "${release_root}/${file_name}"
           done

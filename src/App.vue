@@ -1,16 +1,34 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { NConfigProvider, NMessageProvider, useOsTheme } from 'naive-ui'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { RouterView } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { createAppThemeOptions } from '@/theme/appTheme'
 import { useThemePreference } from '@/theme/themePreference'
+import { useAppChromeStore } from '@/stores/appChrome'
 
 const osTheme = useOsTheme()
 const isDark = ref(osTheme.value === 'dark')
 const { themeFamily } = useThemePreference()
+const appChromeStore = useAppChromeStore()
 const appTheme = computed(() => createAppThemeOptions(isDark.value, themeFamily.value))
+
+onMounted(() => {
+  window.setTimeout(() => {
+    void checkUpdateSilently()
+  }, 3000)
+})
+
+async function checkUpdateSilently() {
+  try {
+    const result = await window.ipcRenderer.invoke('app:check-update')
+
+    appChromeStore.setHasAvailableUpdate(result.hasUpdate)
+  } catch (error) {
+    // noop
+  }
+}
 </script>
 
 <template>

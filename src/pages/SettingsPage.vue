@@ -3,6 +3,8 @@
 // TODO: settings没有左边栏
 import {
   NH1,
+  NAlert,
+  NCollapseTransition,
   NDropdown,
   NInput,
   NButton,
@@ -18,7 +20,7 @@ import {
   NCard,
   type DropdownOption,
 } from 'naive-ui'
-import { TrashOutline, AddOutline, TriangleOutline } from '@vicons/ionicons5'
+import { TrashOutline, AddOutline, TriangleOutline, LogoGithub, CloudDownloadOutline } from '@vicons/ionicons5'
 import BackFloatButton from '@/components/BackFloatButton.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -28,6 +30,7 @@ import {
   themeFamilyOptions,
 } from '@/theme/appTheme'
 import { useThemePreference } from '@/theme/themePreference'
+import { useAppChromeStore } from '@/stores/appChrome'
 
 type TierCode = 'first' | 'new_first' | 'second' | 'third' | 'fourth'
 
@@ -51,6 +54,23 @@ interface AppAboutResult {
   runtimeVersion: string
 }
 
+interface CheckUpdateResult {
+  currentVersion: string
+  latest: {
+    version: string
+    releaseDate: string
+    notes: string[]
+    downloads: {
+      mac_arm64?: string
+      win_x64?: string
+    }
+    releaseNotesUrl?: string
+    mandatory: boolean
+  }
+  hasUpdate: boolean
+  downloadUrl?: string
+}
+
 const router = useRouter()
 const message = useMessage()
 const { themeFamily } = useThemePreference()
@@ -65,6 +85,10 @@ const themeDropdownOptions = computed<DropdownOption[]>(() => themeFamilyOptions
   key: option.key,
 })))
 const currentThemeLabel = computed(() => getThemeFamilyLabel(themeFamily.value))
+const showUpdateNotification = ref(false)
+const appChromeStore = useAppChromeStore()
+const updateInfo = ref<CheckUpdateResult | null>(null)
+const showUpdateNotes = ref(false)
 
 const tierLabels: Record<TierCode, string> = {
   first: '一线城市',
@@ -91,6 +115,7 @@ const cityTierResult = computed(() => findCityTier(normalizedCityName.value))
 const hasQuery = computed(() => normalizedCityName.value.length > 0)
 
 onMounted(() => {
+  void checkUpdate()
   void loadRules()
   void loadAbout()
 })
@@ -204,12 +229,83 @@ function handleThemeSelect(key: string | number) {
 
   themeFamily.value = key
 }
+
+async function checkUpdate() {
+  try {
+    const result = await window.ipcRenderer.invoke('app:check-update') as CheckUpdateResult
+    updateInfo.value = result
+
+    showUpdateNotification.value = result.hasUpdate
+    appChromeStore.setHasAvailableUpdate(result.hasUpdate)
+  } catch (error) {
+    message.error('检查更新失败，请稍后再试')
+  }
+}
+
+function handleViewReleaseNotes() {
+  if (!updateInfo.value?.latest.releaseNotesUrl) {
+    message.error('未找到更新日志链接')
+    return
+  }
+
+  window.ipcRenderer.invoke('app:open-external', updateInfo.value.latest.releaseNotesUrl)
+}
+
+function handleDownloadUpdate() {
+  if (!updateInfo.value?.downloadUrl) {
+    message.error('未找到下载链接')
+    return
+  }
+
+  const downloadUrl = updateInfo.value.downloadUrl
+  window.ipcRenderer.invoke('app:open-external', downloadUrl)
+}
+
+function openEastunWebsite() {
+  window.ipcRenderer.invoke('app:open-external', 'https://eastun.tech')
+}
 </script>
 
 <template>
   <BackFloatButton @click="router.back" />
   <section class="page-shell page-shell--narrow page-shell--top-with-floating-action">
     <n-h1 style="margin: 0">设置</n-h1>
+
+    <section v-if="showUpdateNotification" class="setting-section">
+      <n-alert
+        :type="updateInfo?.latest.mandatory ? 'error' : 'info'"
+        :title="updateInfo?.latest.mandatory ? '此版本即将不再维护' : '有新版本可用'"
+        :show-icon="!updateInfo?.latest.mandatory"
+        >
+        <n-flex vertical>
+          <n-flex align="center">
+            <n-text strong>新版本: v{{ updateInfo?.latest.version }} ({{ updateInfo?.latest.releaseDate }})</n-text>
+            <n-button text underline type="info" @click="showUpdateNotes = !showUpdateNotes">{{ showUpdateNotes ? '收起' : '展开' }}</n-button>
+            <n-collapse-transition :show="showUpdateNotes">
+              <n-text tag="div" depth="3" style="margin-left: 12px; margin-top: 8px">
+                <ul>
+                  <li v-for="(note, index) in updateInfo?.latest.notes" :key="index">{{ note }}</li>
+                </ul>
+              </n-text>
+            </n-collapse-transition>
+          </n-flex>
+          <n-flex align="center" justify="end">
+            <n-button @click="handleViewReleaseNotes">
+              <template #icon>
+                <n-icon><LogoGithub /></n-icon>
+              </template>
+              查看更新日志
+            </n-button>
+            <n-button strong secondary type="primary" @click="handleDownloadUpdate">
+              <template #icon>
+                <n-icon><CloudDownloadOutline /></n-icon>
+              </template>
+              下载更新
+            </n-button>
+          </n-flex>
+        </n-flex>
+      </n-alert>
+    </section>
 
     <section class="setting-section">
       <n-h3 prefix="bar">主题</n-h3>
@@ -317,7 +413,7 @@ function handleThemeSelect(key: string | number) {
             <n-text depth="3">开发者：© 2026 Eastun Tech</n-text>
             <n-text depth="3">
               官网：
-              <a class="about-link" href="https://eastun.tech" target="_blank" rel="noreferrer">eastun.tech</a>
+              <a class="about-link" @click="openEastunWebsite">eastun.tech</a>
             </n-text>
             <n-text depth="3">
               联系我们：

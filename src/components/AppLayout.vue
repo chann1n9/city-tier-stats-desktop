@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
+  NBadge,
   NFlex,
   NIcon,
   NLayout,
@@ -19,6 +20,7 @@ import {
   SettingsOutline,
   SunnyOutline,
 } from '@vicons/ionicons5'
+import { useAppChromeStore } from '@/stores/appChrome'
 
 const props = defineProps<{
   dark: boolean
@@ -32,13 +34,15 @@ interface NavItem {
   label: string
   to: string
   icon: Component
+  badgeDot?: boolean
 }
 
 const route = useRoute()
 const router = useRouter()
+const appChromeStore = useAppChromeStore()
 const isMac = navigator.platform.toLowerCase().includes('mac')
 
-const navItems: NavItem[] = [
+const navItems = computed<NavItem[]>(() => [
   {
     label: '主页',
     to: '/home',
@@ -53,8 +57,9 @@ const navItems: NavItem[] = [
     label: '设置',
     to: '/settings',
     icon: SettingsOutline,
+    badgeDot: appChromeStore.hasAvailableUpdate,
   },
-]
+])
 
 const themeIcon = computed(() => (props.dark ? SunnyOutline : MoonOutline))
 const themeLabel = computed(() => (props.dark ? '浅色模式' : '深色模式'))
@@ -160,7 +165,10 @@ function toggleTheme() {
                       @click="navigate(item.to, item.to === '/search' ? { from: 'home' } : undefined)"
                     >
                       <template #icon>
-                        <n-icon :component="item.icon" />
+                        <n-badge v-if="item.badgeDot" dot>
+                          <n-icon :component="item.icon" />
+                        </n-badge>
+                        <n-icon v-else :component="item.icon" />
                       </template>
                     </n-button>
                   </template>

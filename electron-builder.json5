@@ -28,7 +28,7 @@
     "target": [
       "dmg"
     ],
-    "artifactName": "${productName}-Mac-${version}.${ext}"
+    "artifactName": "City.Tier.Stats-Mac-${version}.${ext}"
   },
   "win": {
     "icon": "build/icons/win/icon.ico",
@@ -40,7 +40,7 @@
         ]
       }
     ],
-    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+    "artifactName": "City.Tier.Stats-Windows-${version}-Setup.${ext}"
   },
   "nsis": {
     "oneClick": false,
@@ -53,6 +53,6 @@
     "target": [
       "AppImage"
     ],
-    "artifactName": "${productName}-Linux-${version}.${ext}"
+    "artifactName": "City.Tier.Stats-Linux-${version}.${ext}"
   }
 }

@@ -9,8 +9,8 @@
     "支持查看分析详情并导出明细结果"
   ],
   "downloads": {
-    "mac_arm64": "https://downloads.eastun.tech/city-tier-stats/releases/v0.9.0/City%20Tier%20Stats-Mac-0.9.0.dmg",
-    "win_x64": "https://downloads.eastun.tech/city-tier-stats/releases/v0.9.0/City%20Tier%20Stats-Windows-0.9.0-Setup.exe"
+    "mac_arm64": "https://downloads.eastun.tech/city-tier-stats-desktop/releases/v0.9.0/City.Tier.Stats-Mac-0.9.0.dmg",
+    "win_x64": "https://downloads.eastun.tech/city-tier-stats-desktop/releases/v0.9.0/City.Tier.Stats-Windows-0.9.0-Setup.exe"
   },
   "releaseNotesUrl": "https://github.com/chann1n9/city-tier-stats-desktop/releases/tag/v0.9.0",
   "mandatory": false

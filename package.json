@@ -3,7 +3,7 @@
   "description": "City tier statistics desktop app",
   "author": "Eastun Tech",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
   "runtimeDependencies": {
     "city-tier-stats": "0.1.5"
