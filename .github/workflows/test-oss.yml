@@ -47,12 +47,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          ossutil config \
-            --access-key-id "${ALIBABA_CLOUD_ACCESS_KEY_ID}" \
-            --access-key-secret "${ALIBABA_CLOUD_ACCESS_KEY_SECRET}" \
-            --sts-token "${ALIBABA_CLOUD_SECURITY_TOKEN}" \
-            --region "${{ vars.ALIYUN_OSS_REGION }}" \
-            --endpoint "https://${{ vars.ALIYUN_OSS_ENDPOINT }}"
+          cat > ~/.ossutilconfig <<EOF
+          [default]
+          accessKeyID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
+          accessKeySecret=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
+          stsToken=${ALIBABA_CLOUD_SECURITY_TOKEN}
+          region=${{ vars.ALIYUN_OSS_REGION }}
+          endpoint=https://${{ vars.ALIYUN_OSS_ENDPOINT }}
+          EOF
+
+          chmod 600 ~/.ossutilconfig
 
       - name: Create test latest.json
         run: |
