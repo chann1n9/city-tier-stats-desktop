@@ -55,9 +55,11 @@ jobs:
 
       - name: Upload latest.json to OSS
         run: |
-          set -euo pipefail
+            set -euo pipefail
 
-          ossutil cp -f latest.json "oss://${{ vars.ALIYUN_OSS_BUCKET }}/${{ vars.ALIYUN_OSS_PREFIX }}/latest.json"
+            ossutil cp -f latest.json "oss://${{ vars.ALIYUN_OSS_BUCKET }}/${{ vars.ALIYUN_OSS_PREFIX }}/latest.json" \
+                --region "${{ vars.ALIYUN_OSS_REGION }}" \
+                --endpoint "https://${{ vars.ALIYUN_OSS_ENDPOINT }}"
 
       - name: Verify public download URL
         run: |
