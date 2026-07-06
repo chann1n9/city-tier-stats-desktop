@@ -1,0 +1,17 @@
+{
+  "version": "0.9.0",
+  "releaseDate": "2026-07-06",
+  "minimumVersion": "0.9.0",
+  "notes": [
+    "首次发布 City Tier Stats Desktop，支持在本地导入 Excel / CSV 文件并查看城市等级统计结果",
+    "支持按分组查看各城市等级占比，方便快速了解不同分组下的城市分布情况",
+    "提供历史分析、未查看结果和搜索筛选，方便回到过去的分析记录",
+    "支持查看分析详情并导出明细结果"
+  ],
+  "downloads": {
+    "mac_arm64": "https://downloads.eastun.tech/city-tier-stats/releases/v0.9.0/City%20Tier%20Stats-Mac-0.9.0.dmg",
+    "win_x64": "https://downloads.eastun.tech/city-tier-stats/releases/v0.9.0/City%20Tier%20Stats-Windows-0.9.0-Setup.exe"
+  },
+  "releaseNotesUrl": "https://github.com/chann1n9/city-tier-stats-desktop/releases/tag/v0.9.0",
+  "mandatory": false
+}
