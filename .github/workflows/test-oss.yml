@@ -25,9 +25,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          curl -L https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64 -o ossutil
-          chmod +x ossutil
-          ./ossutil --version
+          curl -L -o ossutil-2.3.0-linux-amd64.zip \
+            https://gosspublic.alicdn.com/ossutil/v2/2.3.0/ossutil-2.3.0-linux-amd64.zip
+
+          unzip ossutil-2.3.0-linux-amd64.zip
+          chmod +x ossutil-2.3.0-linux-amd64/ossutil
+          sudo mv ossutil-2.3.0-linux-amd64/ossutil /usr/local/bin/ossutil
+
+          ossutil version
 
       - name: Create test latest.json
         run: |
@@ -52,13 +57,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          ./ossutil cp -f latest.json "oss://${{ vars.ALIYUN_OSS_BUCKET }}/${{ vars.ALIYUN_OSS_PREFIX }}/latest.json"
+          ossutil cp -f latest.json "oss://${{ vars.ALIYUN_OSS_BUCKET }}/${{ vars.ALIYUN_OSS_PREFIX }}/latest.json"
 
       - name: Verify public download URL
         run: |
           set -euo pipefail
-
-          echo "Checking:"
-          echo "${{ vars.DOWNLOAD_BASE_URL }}/latest.json"
 
           curl -fsSL "${{ vars.DOWNLOAD_BASE_URL }}/latest.json"
