@@ -31,7 +31,7 @@
 - 支持在 CI 中下载对应版本的 `city-tier-stats` runtime 并打入安装包。
 - 支持 macOS 应用签名、公证和 runtime 二进制签名。
 - 支持按 Electron 目标运行时显式重建 `better-sqlite3`。
-- 支持使用 `doc/release-notes/v{version}.md` 发布 GitHub Release。
+- 支持使用 `docs/release-notes/v{version}.md` 发布 GitHub Release。
 - 发布附件保留 Windows/macOS 安装包与 blockmap，不上传构建调试配置。
 
-详细发布说明：[doc/release-notes/v0.9.0.md](doc/release-notes/v0.9.0.md)
+详细发布说明：[docs/release-notes/v0.9.0.md](docs/release-notes/v0.9.0.md)
