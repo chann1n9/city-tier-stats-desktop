@@ -38,7 +38,7 @@ jobs:
 
           version="$(node -p "require('./package.json').version")"
           release_tag="v${version}"
-          notes_file="doc/release-notes/${release_tag}.md"
+          notes_file="docs/release-notes/${release_tag}.md"
 
           if [ -z "$version" ]; then
             echo "package.json version is empty." >&2
@@ -356,6 +356,7 @@ jobs:
       - build-macos
 
     permissions:
+      id-token: write
       contents: write
 
     steps:
@@ -370,15 +371,21 @@ jobs:
           RELEASE_TAG="${{ needs.validate-release.outputs.release_tag }}"
           VERSION="${{ needs.validate-release.outputs.version }}"
           NOTES_FILE="${{ needs.validate-release.outputs.notes_file }}"
+          LATEST_FILE="docs/latest.json"
 
           if [ ! -f "$NOTES_FILE" ]; then
             echo "Release note not found: $NOTES_FILE" >&2
+            exit 1
+          fi
+          if [ ! -f "$LATEST_FILE" ]; then
+            echo "Latest metadata not found: $LATEST_FILE" >&2
             exit 1
           fi
 
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NOTES_FILE=$NOTES_FILE" >> "$GITHUB_ENV"
+          echo "LATEST_FILE=$LATEST_FILE" >> "$GITHUB_ENV"
 
       - name: Download release artifacts
         uses: actions/download-artifact@v4
@@ -393,8 +400,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          shopt -s nullglob
-          release_files=(release-assets/*)
+          mapfile -d '' release_files < <(find release-assets -type f -print0)
 
           if [ "${#release_files[@]}" -eq 0 ]; then
             echo "No release artifacts found in release-assets." >&2
@@ -413,3 +419,87 @@ jobs:
               --notes-file "$NOTES_FILE" \
               --target "$GITHUB_SHA"
           fi
+
+      - name: Configure Alibaba Cloud credentials
+        uses: aliyun/configure-aliyun-credentials-action@v1
+        with:
+          role-to-assume: ${{ vars.ALIYUN_ROLE_ARN }}
+          oidc-provider-arn: ${{ vars.ALIYUN_OIDC_PROVIDER_ARN }}
+          role-session-name: github-actions-city-tier-stats-release
+          audience: sts.aliyuncs.com
+
+      - name: Install ossutil
+        run: |
+          set -euo pipefail
+
+          curl -L -o ossutil-2.3.0-linux-amd64.zip \
+            https://gosspublic.alicdn.com/ossutil/v2/2.3.0/ossutil-2.3.0-linux-amd64.zip
+
+          unzip ossutil-2.3.0-linux-amd64.zip
+          chmod +x ossutil-2.3.0-linux-amd64/ossutil
+          sudo mv ossutil-2.3.0-linux-amd64/ossutil /usr/local/bin/ossutil
+
+          ossutil version
+
+      - name: Configure ossutil
+        run: |
+          set -euo pipefail
+
+          cat > ~/.ossutilconfig <<EOF
+          [default]
+          accessKeyID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
+          accessKeySecret=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
+          stsToken=${ALIBABA_CLOUD_SECURITY_TOKEN}
+          region=${{ vars.ALIYUN_OSS_REGION }}
+          endpoint=https://${{ vars.ALIYUN_OSS_ENDPOINT }}
+          EOF
+
+          chmod 600 ~/.ossutilconfig
+
+      - name: Upload release assets to OSS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prefix="${{ vars.ALIYUN_OSS_PREFIX }}"
+          prefix="${prefix#/}"
+          prefix="${prefix%/}"
+          oss_root="oss://${{ vars.ALIYUN_OSS_BUCKET }}"
+
+          if [ -n "$prefix" ]; then
+            oss_root="${oss_root}/${prefix}"
+          fi
+
+          release_root="${oss_root}/releases/${RELEASE_TAG}"
+
+          mapfile -d '' release_files < <(
+            find release-assets -type f \
+              \( -name '*.dmg' -o -name '*.exe' -o -name '*.blockmap' \) \
+              -print0
+          )
+
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            echo "No release assets found for OSS upload." >&2
+            exit 1
+          fi
+
+          for file_path in "${release_files[@]}"; do
+            file_name="$(basename "$file_path")"
+            ossutil cp -f "$file_path" "${release_root}/${file_name}"
+          done
+
+      - name: Upload latest.json to OSS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prefix="${{ vars.ALIYUN_OSS_PREFIX }}"
+          prefix="${prefix#/}"
+          prefix="${prefix%/}"
+          oss_root="oss://${{ vars.ALIYUN_OSS_BUCKET }}"
+
+          if [ -n "$prefix" ]; then
+            oss_root="${oss_root}/${prefix}"
+          fi
+
+          ossutil cp -f "$LATEST_FILE" "${oss_root}/latest.json"
