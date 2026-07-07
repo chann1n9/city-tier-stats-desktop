@@ -138,7 +138,6 @@ function toggleTheme() {
     <n-layout
       has-sider
       class="app-layout__body"
-      position="absolute"
       :content-style="{ height: '100%' }"
     >
       <n-layout-sider
@@ -225,8 +224,6 @@ function toggleTheme() {
 }
 
 .app-layout__header {
-  position: relative;
-  z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 160px;
   align-items: center;
@@ -278,14 +275,12 @@ function toggleTheme() {
 }
 
 .app-layout__body {
-  top: 0;
+  height: calc(100% - var(--app-header-height));
   background: var(--app-bg, var(--n-color));
 }
 
 .app-layout__sider {
   background: transparent;
-  z-index: 3;
-  -webkit-app-region: drag;
 }
 
 .app-layout__sider :deep(.n-layout-sider-scroll-container) {
@@ -304,7 +299,6 @@ function toggleTheme() {
   justify-items: center;
   min-height: calc(var(--app-traffic-light-space-height) + 12px);
   padding-top: var(--app-traffic-light-space-height);
-  -webkit-app-region: drag;
 }
 
 .app-layout__traffic-light-space {
@@ -330,7 +324,6 @@ function toggleTheme() {
 .app-layout__content {
   min-width: 0;
   background: var(--app-bg, var(--n-color));
-  padding-top: var(--app-header-height);
 }
 
 .app-layout__content-inner {

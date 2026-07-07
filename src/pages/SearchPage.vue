@@ -537,7 +537,7 @@ async function deleteSelectedRuns() {
           v-model:page="page"
           v-model:page-size="pageSize"
           :item-count="total"
-          :page-sizes="[5, 25, 50, 100]"
+          :page-sizes="[25, 50, 100]"
           show-size-picker
           @update:page="handlePageChange"
           @update:page-size="handlePageSizeChange"

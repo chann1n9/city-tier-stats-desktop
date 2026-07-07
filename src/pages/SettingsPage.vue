@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// FIXME: 返回按钮返回不了
 // TODO: yaml预览？修改路径？
 // TODO: settings没有左边栏
 import {
