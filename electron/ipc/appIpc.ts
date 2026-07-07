@@ -2,10 +2,12 @@ import { app, ipcMain, shell } from 'electron'
 import { getCityTierStatsRuntimeVersion } from '../services/runtimeService'
 
 const latestMetadataUrl = 'https://downloads.eastun.tech/city-tier-stats-desktop/latest.json'
+const updateCheckTimeoutMs = 8000
 
 interface LatestMetadata {
   version: string
   releaseDate: string
+  minimumVersion: string
   notes: string[]
   downloads: {
     mac_arm64?: string
@@ -29,6 +31,7 @@ function assertLatestMetadata(value: unknown): LatestMetadata {
   if (
     typeof value.version !== 'string'
     || typeof value.releaseDate !== 'string'
+    || typeof value.minimumVersion !== 'string'
     || !Array.isArray(value.notes)
     || !value.notes.every((note) => typeof note === 'string')
     || !isRecord(downloads)
@@ -39,6 +42,7 @@ function assertLatestMetadata(value: unknown): LatestMetadata {
   return {
     version: value.version,
     releaseDate: value.releaseDate,
+    minimumVersion: value.minimumVersion,
     notes: value.notes,
     downloads: {
       mac_arm64: typeof downloads.mac_arm64 === 'string' ? downloads.mac_arm64 : undefined,
@@ -101,24 +105,34 @@ export function registerAppIpc() {
   })
 
   ipcMain.handle('app:check-update', async () => {
-    const response = await fetch(latestMetadataUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
+    const abortController = new AbortController()
+    const timeout = setTimeout(() => {
+      abortController.abort()
+    }, updateCheckTimeoutMs)
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch latest metadata: ${response.status}`)
-    }
+    try {
+      const response = await fetch(latestMetadataUrl, {
+        headers: {
+          accept: 'application/json',
+        },
+        signal: abortController.signal,
+      })
 
-    const latest = assertLatestMetadata(await response.json())
-    const currentVersion = app.getVersion()
+      if (!response.ok) {
+        throw new Error(`Failed to fetch latest metadata: ${response.status}`)
+      }
 
-    return {
-      currentVersion,
-      latest,
-      hasUpdate: compareVersions(latest.version, currentVersion) > 0,
-      downloadUrl: getCurrentDownloadUrl(latest.downloads),
+      const latest = assertLatestMetadata(await response.json())
+      const currentVersion = app.getVersion()
+
+      return {
+        currentVersion,
+        latest,
+        hasUpdate: compareVersions(latest.version, currentVersion) > 0,
+        downloadUrl: getCurrentDownloadUrl(latest.downloads),
+      }
+    } finally {
+      clearTimeout(timeout)
     }
   })
 

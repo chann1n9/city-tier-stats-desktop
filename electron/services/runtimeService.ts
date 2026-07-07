@@ -17,11 +17,15 @@ export interface CityTierStatsResult {
 }
 
 export function getCityTierStatsRuntimePath() {
+  const executableName = process.platform === 'win32'
+    ? 'city-tier-stats.exe'
+    : 'city-tier-stats'
+
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'runtimes/city-tier-stats/city-tier-stats')
+    return path.join(process.resourcesPath, 'runtimes/city-tier-stats', executableName)
   }
 
-  return path.join(process.env.APP_ROOT, 'resources/runtimes/city-tier-stats/city-tier-stats')
+  return path.join(process.env.APP_ROOT, 'resources/runtimes/city-tier-stats', executableName)
 }
 
 export async function runCityTierStats(

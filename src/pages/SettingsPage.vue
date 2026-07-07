@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// FIXME: 返回按钮返回不了
 // TODO: yaml预览？修改路径？
 // TODO: settings没有左边栏
 import {
@@ -59,6 +60,7 @@ interface CheckUpdateResult {
   latest: {
     version: string
     releaseDate: string
+    minimumVersion: string
     notes: string[]
     downloads: {
       mac_arm64?: string
@@ -274,7 +276,7 @@ function openEastunWebsite() {
     <section v-if="showUpdateNotification" class="setting-section">
       <n-alert
         :type="updateInfo?.latest.mandatory ? 'error' : 'info'"
-        :title="updateInfo?.latest.mandatory ? '此版本即将不再维护' : '有新版本可用'"
+        :title="updateInfo?.latest.mandatory ? `此版本即将不再维护（最小支持版本 ${updateInfo?.latest.minimumVersion}）` : '有新版本可用'"
         :show-icon="!updateInfo?.latest.mandatory"
         >
         <n-flex vertical>

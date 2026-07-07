@@ -23,7 +23,9 @@ declare namespace NodeJS {
 
 // Used in Renderer process, expose in `preload.ts`
 interface Window {
-  ipcRenderer: import('electron').IpcRenderer
+  ipcRenderer: {
+    invoke: import('electron').IpcRenderer['invoke']
+  }
   fileSystem: {
     getPathForFile(file: File): string
   }
