@@ -265,6 +265,10 @@ function handleDownloadUpdate() {
 function openEastunWebsite() {
   window.ipcRenderer.invoke('app:open-external', 'https://eastun.tech')
 }
+
+function openGithubRepo() {
+  window.ipcRenderer.invoke('app:open-external', 'https://github.com/chann1n9/city-tier-stats-desktop')
+}
 </script>
 
 <template>
@@ -427,6 +431,14 @@ function openEastunWebsite() {
             <n-text depth="3">应用版本：v{{ appVersion }}</n-text>
             <n-text depth="3">内置分析器版本：v{{ runtimeVersion }}</n-text>
           </div>
+
+          <n-flex>
+            <n-button @click="openGithubRepo">
+              <template #icon>
+                <n-icon><LogoGithub /></n-icon>
+              </template>
+            </n-button>
+          </n-flex>
         </div>
       </n-card>
     </section>
