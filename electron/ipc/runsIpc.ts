@@ -145,7 +145,7 @@ export function registerRunsIpc() {
 
 function buildExportFileName(originalName: string, format: ExportDetailFormat) {
   const parsedName = path.parse(originalName).name || '分析详情'
-  return `${sanitizeFileName(`ctt详情-${parsedName}`)}.${format}`
+  return `${sanitizeFileName(`cts详情-${parsedName}`)}.${format}`
 }
 
 function sanitizeFileName(fileName: string) {
