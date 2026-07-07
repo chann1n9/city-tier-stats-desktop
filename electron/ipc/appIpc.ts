@@ -124,11 +124,16 @@ export function registerAppIpc() {
 
       const latest = assertLatestMetadata(await response.json())
       const currentVersion = app.getVersion()
+      const hasUpdate = compareVersions(latest.version, currentVersion) > 0
+      const isBelowMinimumVersion = compareVersions(currentVersion, latest.minimumVersion) < 0
+      const isMandatoryUpdate = hasUpdate && (latest.mandatory || isBelowMinimumVersion)
 
       return {
         currentVersion,
         latest,
-        hasUpdate: compareVersions(latest.version, currentVersion) > 0,
+        hasUpdate,
+        isBelowMinimumVersion,
+        isMandatoryUpdate,
         downloadUrl: getCurrentDownloadUrl(latest.downloads),
       }
     } finally {

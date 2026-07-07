@@ -69,6 +69,8 @@ interface CheckUpdateResult {
     mandatory: boolean
   }
   hasUpdate: boolean
+  isBelowMinimumVersion: boolean
+  isMandatoryUpdate: boolean
   downloadUrl?: string
 }
 
@@ -90,6 +92,36 @@ const showUpdateNotification = ref(false)
 const appChromeStore = useAppChromeStore()
 const updateInfo = ref<CheckUpdateResult | null>(null)
 const showUpdateNotes = ref(false)
+const updateAlertType = computed(() => {
+  if (!updateInfo.value) {
+    return 'info'
+  }
+
+  if (updateInfo.value.latest.mandatory) {
+    return 'error'
+  }
+
+  if (updateInfo.value.isBelowMinimumVersion) {
+    return 'warning'
+  }
+
+  return 'info'
+})
+const updateAlertTitle = computed(() => {
+  if (!updateInfo.value) {
+    return '有新版本可用'
+  }
+
+  if (updateInfo.value.latest.mandatory) {
+    return '此更新需要安装'
+  }
+
+  if (updateInfo.value.isBelowMinimumVersion) {
+    return `当前版本已低于最低支持版本 ${updateInfo.value.latest.minimumVersion}`
+  }
+
+  return '有新版本可用'
+})
 
 const tierLabels: Record<TierCode, string> = {
   first: '一线城市',
@@ -278,9 +310,9 @@ function openGithubRepo() {
 
     <section v-if="showUpdateNotification" class="setting-section">
       <n-alert
-        :type="updateInfo?.latest.mandatory ? 'error' : 'info'"
-        :title="updateInfo?.latest.mandatory ? `此版本即将不再维护（最小支持版本 ${updateInfo?.latest.minimumVersion}）` : '有新版本可用'"
-        :show-icon="!updateInfo?.latest.mandatory"
+        :type="updateAlertType"
+        :title="updateAlertTitle"
+        :show-icon="!updateInfo?.isMandatoryUpdate"
         >
         <n-flex vertical>
           <n-flex align="center">
